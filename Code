@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripWise</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23f4ecd8' stroke='%232c221e' stroke-width='8'/><circle cx='50' cy='50' r='38' fill='none' stroke='%234a3525' stroke-width='3' stroke-dasharray='4,4'/><polygon points='50,15 58,42 85,50 58,58 50,85 42,58 15,50 42,42' fill='%232c221e'/><polygon points='50,15 58,42 50,50 42,42' fill='%23c59b27'/><polygon points='85,50 58,58 50,50 58,42' fill='%23c59b27'/><circle cx='50' cy='50' r='4' fill='%23f4ecd8'/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Courier Prime', monospace;
+            background-color: #f4ecd8;
+            background-image: radial-gradient(#e2d4bc 1px, transparent 1px);
+            background-size: 24px 24px;
+            color: #2c221e;
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='%234a3525' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='5' r='2'/><path d='M12 7v14'/><path d='M12 7l-5 14'/><path d='M12 7l5 14'/></svg>") 16 16, auto;
+        }
+        .heading-font { font-family: 'Special Elite', cursive; }
+        
+        .polaroid {
+            background: #fffdf9;
+            padding: 12px 12px 35px 12px;
+            box-shadow: 3px 4px 12px rgba(44, 34, 30, 0.15);
+            transition: transform 0.3s ease;
+        }
+        .polaroid:hover {
+            transform: scale(1.02) rotate(1deg);
+            z-index: 10;
+        }
+
+        .notebook-line {
+            border-bottom: 1px dashed #d3c2a5;
+            line-height: 2rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-amber-800 selection:text-white">
+
+    <div class="bg-[#2c221e] text-[#f4ecd8] px-4 py-2 text-xs flex justify-between items-center border-b border-[#4a3525]">
+        <span><i class="fa-solid fa-feather mr-2"></i> Cartographer's Logbook — Active API Mode</span>
+        <div class="flex items-center gap-3">
+            <span>API Status: <strong id="apiStatusText" class="text-amber-400">Connected</strong></span>
+            <button onclick="openApiModal()" class="bg-[#4a3525] hover:bg-[#5c4331] text-[#f4ecd8] px-2.5 py-1 rounded text-[11px] border border-[#d3c2a5]/40 font-bold">Configure API Key</button>
+        </div>
+    </div>
+
+    <div id="apiModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-[#f4ecd8] border-2 border-[#2c221e] rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <h3 class="heading-font text-xl text-[#2c221e]"><i class="fa-solid fa-key mr-2"></i> External API Key Setup</h3>
+            <p class="text-xs text-[#5c4331]">Paste your external travel/mapping API key below for your screen recording session. It remains securely in your browser session.</p>
+            <input type="text" id="apiKeyInput" placeholder="Enter API Key (e.g. OpenTripMap / Google Maps)..." class="w-full p-2.5 bg-[#fffdf9] border border-[#4a3525] rounded text-xs focus:outline-none">
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeApiModal()" class="px-4 py-2 bg-[#2c221e] text-[#f4ecd8] text-xs rounded font-bold">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <header class="border-b-2 border-[#2c221e] py-6 px-8 max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+            <h1 class="heading-font text-3xl md:text-4xl text-[#2c221e] tracking-wider">TripWise</h1>
+            <p class="text-xs text-[#5c4331] italic mt-1">Railway schedules,Cruise routes & Global waypoints.</p>
+        </div>
+
+        <div onclick="togglePocketWatch()" class="bg-[#fffdf9] border-2 border-[#4a3525] px-5 py-3 rounded-2xl shadow-md flex items-center gap-4 cursor-pointer hover:bg-[#f9f5eb] transition">
+            <div class="w-10 h-10 rounded-full bg-[#2c221e] text-[#f4ecd8] flex items-center justify-center text-lg shadow-inner">
+                <i class="fa-solid fa-clock-rotate-left" id="watchIcon"></i>
+            </div>
+            <div>
+                <span class="text-[10px] uppercase font-bold tracking-widest text-[#7c6351]">Time</span>
+                <div id="pocketWatchDisplay" class="heading-font text-lg text-[#2c221e]">12:00:00 AM</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 flex-grow w-full space-y-10">
+
+        <div class="bg-[#fffdf9] border-2 border-[#2c221e] p-6 rounded-2xl shadow-md grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+            <div>
+                <label class="block text-[11px] uppercase font-bold text-[#4a3525] mb-1">Journey Territory</label>
+                <select id="filterScope" onchange="filterExpeditions()" class="w-full p-2.5 bg-[#f4ecd8] border border-[#4a3525] rounded text-xs font-bold">
+                    <option value="all">All Global Expeditions</option>
+                    <option value="domestic">Domestic Expeditions (India)</option>
+                    <option value="international">International Voyages</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] uppercase font-bold text-[#4a3525] mb-1">Transport Vessel</label>
+                <select id="filterTransport" onchange="filterExpeditions()" class="w-full p-2.5 bg-[#f4ecd8] border border-[#4a3525] rounded text-xs font-bold">
+                    <option value="all">All Transports (Train, Ship, Flight, Road)</option>
+                    <option value="train">Railway</option>
+                    <option value="ship">Cruise</option>
+                    <option value="flight">Aviation</option>
+                    <option value="road">Road Trip</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] uppercase font-bold text-[#4a3525] mb-1">Search Waypoint</label>
+                <input type="text" id="searchInput" placeholder="Search cities, ports..." oninput="filterExpeditions()" class="w-full p-2.5 bg-[#f4ecd8] border border-[#4a3525] rounded text-xs">
+            </div>
+            <div class="flex items-end h-full pt-5 md:pt-0">
+                <button onclick="switchTab('explore')" id="btnExplore" class="flex-1 bg-[#2c221e] text-[#f4ecd8] py-2.5 px-4 rounded text-xs font-bold uppercase tracking-wider mr-2">Atlas</button>
+                <button onclick="switchTab('itinerary')" id="btnItinerary" class="flex-1 bg-[#d3c2a5] text-[#2c221e] py-2.5 px-4 rounded text-xs font-bold uppercase tracking-wider border border-[#4a3525]">Journal (<span id="itineraryCount">0</span>)</button>
+            </div>
+        </div>
+
+        <div id="viewExplore" class="space-y-8">
+            <div class="border-b border-[#d3c2a5] pb-2 flex justify-between items-center">
+                <h2 class="heading-font text-2xl text-[#2c221e]"><i class="fa-solid fa-map mr-2"></i>Pick Your Next Adventure</h2>
+                <span class="text-xs italic text-[#7c6351]">Lodgings and Amenities</span>
+            </div>
+
+            <div id="destinationsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            </div>
+        </div>
+
+        <div id="viewItinerary" class="hidden space-y-6">
+            <div class="bg-[#fffdf9] border-2 border-[#2c221e] p-8 rounded-2xl shadow-xl relative max-w-4xl mx-auto">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#4a3525] text-[#f4ecd8] text-xs px-4 py-1 rounded font-bold uppercase tracking-widest">Notebook Checklist Itinerary</div>
+                
+                <div class="flex justify-between items-center mb-6 pt-4 border-b border-[#d3c2a5] pb-4">
+                    <h2 class="heading-font text-2xl text-[#2c221e]">Passenger Travel Manifest</h2>
+                    <button onclick="clearJournal()" class="text-xs text-red-800 font-bold underline">Clear All Entries</button>
+                </div>
+
+                <div id="itineraryNotebookList" class="space-y-4">
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+1    <div id="detailModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-[#fffdf9] border-2 border-[#2c221e] rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 shadow-2xl relative space-y-6">
+            <button onclick="closeModal()" class="absolute top-4 right-4 bg-[#2c221e] text-[#f4ecd8] w-8 h-8 rounded-full font-bold flex items-center justify-center text-xs">✕</button>
+            
+            <div class="flex flex-col md:flex-row gap-6 items-center">
+                <div class="polaroid w-48 flex-shrink-0">
+                    <img id="modalImg" src="" class="w-full h-40 object-cover grayscale contrast-125 sepia">
+                    <p id="modalPolaroidCaption" class="text-center font-heading text-[11px] mt-2 font-bold">Waypoint</p>
+                </div>
+                <div class="space-y-2">
+                    <span id="modalCategory" class="text-[10px] uppercase font-bold bg-[#d3c2a5] px-2 py-0.5 rounded text-[#2c221e]">Category</span>
+                    <h2 id="modalTitle" class="heading-font text-3xl text-[#2c221e]">Destination Title</h2>
+                    <p id="modalLocation" class="text-xs text-[#7c6351]"><i class="fa-solid fa-compass mr-1"></i> Location Coordinates</p>
+                    <p id="modalDescription" class="text-xs text-[#2c221e] leading-relaxed pt-2"></p>
+                </div>
+            </div>
+
+            <div class="border-t border-dashed border-[#d3c2a5] pt-4">
+                <h4 class="heading-font text-sm text-[#4a3525] mb-2"><i class="fa-solid fa-bed mr-2"></i> Verified Hostels & Inns</h4>
+                <ul id="modalHostels" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-[#2c221e]"></ul>
+            </div>
+
+            <div class="border-t border-dashed border-[#d3c2a5] pt-4 space-y-3">
+                <h4 class="heading-font text-sm text-[#4a3525]"><i class="fa-solid fa-train-subway mr-2"></i> Railways, Steamships & Airlines</h4>
+                <div id="modalTransportBox" class="bg-[#f4ecd8] p-4 rounded-xl border border-[#4a3525]/40 text-xs space-y-2"></div>
+                
+                <div class="mt-3">
+                    <p class="text-[11px] font-bold text-[#4a3525] mb-1"><i class="fa-solid fa-map-location-dot mr-1"></i> Route Mapping (Google Maps):</p>
+                    <div class="w-full h-40 bg-[#e2d4bc] rounded-xl overflow-hidden border border-[#4a3525]">
+                        <iframe id="mapFrame" width="100%" height="100%" style="border:0; filter: sepia(100%) contrast(120%);" loading="lazy" src=""></iframe>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 flex gap-4">
+                <button id="modalAddBtn" onclick="toggleJournalFromModal()" class="flex-1 bg-[#2c221e] text-[#f4ecd8] py-3 rounded-xl text-xs font-bold uppercase tracking-wider">Add to Notebook Checklist</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-t-2 border-[#2c221e] py-6 text-center text-xs text-[#5c4331] mt-auto">
+        <p>Your Expedition Logbook</p>
+    </footer>
+
+    <script>
+        const globalExpeditions = [
+            {
+                id: 1,
+                name: "Madurai & The Temple Lands",
+                type: "domestic",
+                transport: "train",
+                category: "Ancient Dravidian Heritage",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=600&q=80",
+                description: "An ancient metropolis renowned for towering gopurams, jasmine bazaars, and sacred temple tanks.",
+                hostels: ["Heritage Backpacker Inn Madurai", "Temple View Dorms", "Madurai Heritage Haveli"],
+                transportInfo: {
+                    mode: "Southern Railway Express / Vaigai Express",
+                    details: "Direct sleeper carriage from Chennai Central. Fare: ₹650. Duration: 7 Hours.",
+                    mapQuery: "Madurai+Tamil+Nadu"
+                }
+            },
+            {
+                id: 2,
+                name: "Surat Textile Hub",
+                type: "domestic",
+                transport: "road",
+                category: "Silk & Diamond Markets",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1621570276931-d5f76f7b9f7a?auto=format&fit=crop&w=600&q=80",
+                description: "The historic port city along the Tapi river, famous for exquisite silk brocades and street food.",
+                hostels: ["Tapi River Backpackers Hostel", "Surat Textile Inn", "Gopipura Heritage Stay"],
+                transportInfo: {
+                    mode: "National Highway Carriage / Luxury Bus",
+                    details: "NH 48 route from Mumbai. Duration: 5 Hours. Waypoints: Vapi fuel stations & restrooms.",
+                    mapQuery: "Surat+Gujarat"
+                }
+            },
+            {
+                id: 3,
+                name: "Meghalaya Cloud Peaks",
+                type: "domestic",
+                transport: "flight",
+                category: "Living Root Bridges & Waterfalls",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=600&q=80",
+                description: "The abode of clouds featuring misty green gorges, cascading waterfalls, and living root bridges.",
+                hostels: ["Shillong Backpackers Lodge", "Cherrapunji Mist Hostel", "Umiam Lake Retreat"],
+                transportInfo: {
+                    mode: "Aviation to Guwahati + Mountain Cab",
+                    details: "IndiGo flight to Guwahati (GAU), followed by 3-hour scenic mountain cab ride.",
+                    mapQuery: "Shillong+Meghalaya"
+                }
+            },
+            {
+                id: 4,
+                name: "Amsterdam Canals & Gables",
+                type: "international",
+                transport: "ship",
+                category: "Northern European Canals",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?auto=format&fit=crop&w=600&q=80",
+                description: "A labyrinth of historic canals lined with 17th-century gabled merchant houses and art museums.",
+                hostels: ["ClinkNOORD Amsterdam Hostel", "Flying Pig Downtown", "Generator Amsterdam"],
+                transportInfo: {
+                    mode: "North Sea Cruise Steamship / KLM Flight",
+                    details: "Direct transatlantic flight to Schiphol (AMS) or European River Steamship tour.",
+                    mapQuery: "Amsterdam+Netherlands"
+                }
+            },
+            
+            { 
+                  id: 5,
+                name: "Gokarna Coastal Beaches",
+                type: "domestic",
+                transport: "train",
+                category: "Beaches & Temple Trails",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=600&q=80",
+                description: "Pristine cliffside beaches, Mahabaleshwar temple history, and laid-back coastal vibes.",
+                hostels: ["Zostel Gokarna", "Trippr Hostel Gokarna", "Hostelmate Kudle Beach"],
+                transportInfo: {
+                    mode: "Konkan Railway Express / Matsyagandha Express",
+                    details: "Train to Gokarna Road (GOK). Sleeper fare: ₹480. Duration: 12 Hours from Mumbai.",
+                    mapQuery: "Gokarna+Karnataka"
+                }
+            },
+            {
+                id: 6,
+                name: "Hampi Boulder Ruins",
+                type: "domestic",
+                transport: "train",
+                category: "UNESCO Ancient Empire",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1600100397608-f010e423b971?auto=format&fit=crop&w=600&q=80",
+                description: "Surreal boulder-strewn landscapes, Vijayanagara temple architecture, and river coracle rides.",
+                hostels: ["Hampi's Secret Backpackers", "Gopi Guesthouse & Hostel", "Rocking Hampi Backpackers"],
+                transportInfo: {
+                    mode: "Hampi Express Railway to Hosapete",
+                    details: "Direct train to Hosapete Junction (HPT) followed by a 13km auto-rickshaw ride to Hampi Bazaar.",
+                    mapQuery: "Hampi+Karnataka"
+                }
+            },
+            {
+                id: 7,
+                name: "Leh-Ladakh High Passes",
+                type: "domestic",
+                transport: "road",
+                category: "Himalayan Desert & Lakes",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=600&q=80",
+                description: "High-altitude cold mountain desert, azure Pangong Tso waters, and ancient Buddhist monasteries.",
+                hostels: ["Hobo Hostel Leh", "The Hosteller Leh", "Zostel Leh"],
+                transportInfo: {
+                    mode: "Manali-Leh Highway Motor Expedition",
+                    details: "Scenic 470km mountain highway passing through Atal Tunnel & Baralacha La Pass.",
+                    mapQuery: "Leh+Ladakh"
+                }
+            },
+            {
+                id: 8,
+                name: "Kyoto Bamboo Groves",
+                type: "international",
+                transport: "flight",
+                category: "Japanese Heritage & Temples",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80",
+                description: "Serene bamboo forests, traditional wooden machiya houses, and cherry blossom-lined shrine walks.",
+                hostels: ["K's House Kyoto Hostel", "Piece Hostel Sanjo", "Len Kyoto Kawaramachi"],
+                transportInfo: {
+                    mode: "Japan Airlines / Shinkansen Bullet Train",
+                    details: "Flight to Kansai International Airport (KIX), then 75m Haruka Express bullet train.",
+                    mapQuery: "Kyoto+Japan"
+                }
+            },
+            {
+                id: 9,
+                name: "Hoi An Ancient Lantern Town",
+                type: "international",
+                transport: "flight",
+                category: "Indochina Lantern Streets",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=600&q=80",
+                description: "Yellow-hued heritage merchant houses, glowing silk lanterns, and riverboat night markets.",
+                hostels: ["Mad Monkey Hostel Hoi An", "Tribee Cotu Hostel", "Under The Coconut Tree Hostel"],
+                transportInfo: {
+                    mode: "VietJet Air Flight to Da Nang + Shuttle",
+                    details: "Direct flight to Da Nang (DAD) followed by a 45-minute coastal shuttle to Hoi An Old Town.",
+                    mapQuery: "Hoi+An+Vietnam"
+                }
+            },
+            {
+                id: 10,
+                name: "Santorini Cliff Caldera",
+                type: "international",
+                transport: "ship",
+                category: "Aegean Sea Cyclades",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=600&q=80",
+                description: "Whitewashed cliffside villages, blue-domed churches, and famous Aegean sea sunsets.",
+                hostels: ["Youth Hostel Anna Perissa", "Caveland Hostel Santorini", "Fira Backpackers Place"],
+                transportInfo: {
+                    mode: "Piraeus Ferry Steamship / Aegean Air",
+                    details: "High-speed SeaJets ferry from Athens Piraeus port or direct flight to Thira (JTR).",
+                    mapQuery: "Santorini+Greece"
+                }
+            },
+            {
+                id: 11,
+                name: "Udaipur Lake Palaces",
+                type: "domestic",
+                transport: "train",
+                category: "Mewar Royal Lakes",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1615836245337-f5b9b2303f10?auto=format&fit=crop&w=600&q=80",
+                description: "Regal City Palace overlooking Lake Pichola, heritage ghats, and Mewari artisan alleys.",
+                hostels: ["Moustache Hostel Udaipur", "Zostel Udaipur", "Bunkyard Hostel Lakeview"],
+                transportInfo: {
+                    mode: "Mewar Express Railway",
+                    details: "Overnight train from Hazrat Nizamuddin to Udaipur City Station (UDZ). Fare: ₹520.",
+                    mapQuery: "Udaipur+Rajasthan"
+                }
+            },
+            {
+                id: 12,
+                name: "Munnar Tea Plantations",
+                type: "domestic",
+                transport: "road",
+                category: "Western Ghats Mist",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&w=600&q=80",
+                description: "Rolling emerald green tea estates, misty mountain valleys, and wild elephant corridors.",
+                hostels: ["The Hosteller Munnar", "DormTree Munnar", "Zostel Munnar"],
+                transportInfo: {
+                    mode: "Western Ghats KSRTC Mountain Bus",
+                    details: "Scenic 130km mountain drive from Kochi Airport (COK). Duration: 4 Hours.",
+                    mapQuery: "Munnar+Kerala"
+                }
+            },
+            {
+                id: 13,
+                name: "Baku Flame Towers & Silk Road",
+                type: "international",
+                transport: "flight",
+                category: "Caspian Sea Crossroads",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=600&q=80",
+                description: "Ancient walled Icherisheher city contrasted with ultra-modern Flame Towers along the Caspian.",
+                hostels: ["Baku Old City Hostel", "Sahil Hostel & Hotel", "Baku City Backpackers"],
+                transportInfo: {
+                    mode: "Azerbaijan Airlines / AZAL Direct",
+                    details: "Direct flight to Heydar Aliyev International Airport (GYD). Flight time: 4h 30m.",
+                    mapQuery: "Baku+Azerbaijan"
+                }
+            },
+            {
+                id: 14,
+                name: "Pondicherry French Quarter",
+                type: "domestic",
+                transport: "road",
+                category: "Colonial Heritage Coast",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1589793463357-5fb813435467?auto=format&fit=crop&w=600&q=80",
+                description: "Mustard-yellow French colonial villas, bougainvillea avenues, and quiet rocky promenades.",
+                hostels: ["MIRA Hostel Pondicherry", "Ostello Pondicherry", "Unplan Hostel White Town"],
+                transportInfo: {
+                    mode: "East Coast Road (ECR) Scenic Drive",
+                    details: "150km coastal road trip from Chennai. Duration: 3 Hours via ECR highway.",
+                    mapQuery: "Pondicherry+India"
+                }
+            },
+            {
+                id: 15,
+                name: "Phuket Limestone Islands",
+                type: "international",
+                transport: "ship",
+                category: "Andaman Sea Coast",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?auto=format&fit=crop&w=600&q=80",
+                description: "Towering limestone karsts rising from emerald waters, vibrant night bazaars, and island cruises.",
+                hostels: ["Bodega Phuket Party Hostel", "Lub d Phuket Patong", "BearPacker Patong Hostel"],
+                transportInfo: {
+                    mode: "Thai Airways / Andaman Express Ferry",
+                    details: "Direct flight to Phuket (HKT) followed by ferry transfers to Phi Phi Islands.",
+                    mapQuery: "Phuket+Thailand"
+                }
+            },
+            {
+                id: 16,
+                name: "Varanasi Sacred Ghats",
+                type: "domestic",
+                transport: "train",
+                category: "Sacred Ganges Heritage",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1561361513-2d000a50f0dc?auto=format&fit=crop&w=600&q=80",
+                description: "The world's oldest living city, glowing evening Ganga Aarti, and narrow labyrinthine alleys.",
+                hostels: ["Stops Hostel Varanasi", "Zostel Varanasi", "Moustache Varanasi"],
+                transportInfo: {
+                    mode: "Vande Bharat Express Railway",
+                    details: "High-speed rail from New Delhi to Varanasi Junction (BSB). Duration: 8 Hours.",
+                    mapQuery: "Varanasi+Uttar+Pradesh"
+                }
+            },
+            {
+                id: 17,
+                name: "Zurich Alpine Lakes",
+                type: "international",
+                transport: "train",
+                category: "Swiss Alpine Elegance",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=600&q=80",
+                description: "Pristine glacial lake waters, medieval Old Town Guild houses, and snow-capped alpine panoramas.",
+                hostels: ["Oldtown Hostel Otter", "Youthhostel Zurich", "GreenAlpine Backpackers"],
+                transportInfo: {
+                    mode: "Swiss Federal Railways (SBB CFF FFS)",
+                    details: "Direct connection from Zurich Airport (ZRH) to Zurich Hauptbahnhof central station.",
+                    mapQuery: "Zurich+Switzerland"
+                }
+            },
+            {
+                id: 18,
+                name: "Darjeeling Tea Hills",
+                type: "domestic",
+                transport: "train",
+                category: "Eastern Himalayan Ridge",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=600&q=80",
+                description: "Views of Kanchenjunga peaks, historic Toy Train steam railways, and aromatic tea estates.",
+                hostels: ["The Hidden Canyon Hostel", "Hideout Backpackers Darjeeling", "Panda Hostel"],
+                transportInfo: {
+                    mode: "Darjeeling Himalayan Railway (Toy Train)",
+                    details: "Steam train ride from New Jalpaiguri (NJP) up the mountain zig-zag tracks.",
+                    mapQuery: "Darjeeling+West+Bengal"
+                }
+            },
+            {
+                id: 19,
+                name: "Dubrovnik Adriatic Fortress",
+                type: "international",
+                transport: "ship",
+                category: "Adriatic Medieval Walls",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=600&q=80",
+                description: "Imposing 16th-century stone walls, terracotta roofs, and sapphire blue Adriatic sea views.",
+                hostels: ["Hostel Angelina Old Town", "Free Bird Hostel Dubrovnik", "My Way Hostel"],
+                transportInfo: {
+                    mode: "Adriatic Ferry Steamship / Croatia Airlines",
+                    details: "Coastal passenger steamships from Split or direct international flight to Dubrovnik (DBV).",
+                    mapQuery: "Dubrovnik+Croatia"
+                }
+            },
+            {
+                id: 20,
+                name: "Rishikesh Himalayan Ganges",
+                type: "domestic",
+                transport: "road",
+                category: "Yoga Capital & River Rafting",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1598970434795-0c54fe7c0648?auto=format&fit=crop&w=600&q=80",
+                description: "Iconic Lakshman Jhula suspension bridges, river white-water rafting, and riverside ashrams.",
+                hostels: ["Bunk Stay Rishikesh", "Moustache Rishikesh", "Skyard Hostel Tapovan"],
+                transportInfo: {
+                    mode: "Haridwar Highway Road Express",
+                    details: "Train to Haridwar Junction followed by 25km scenic road journey along the river bank.",
+                    mapQuery: "Rishikesh+Uttarakhand"
+                }
+            },
+            {
+                id: 21,
+                name: "Alappuzha Backwater Canals",
+                type: "domestic",
+                transport: "ship",
+                category: "Kerala Backwater Houseboats",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=600&q=80",
+                description: "Tranquil palm-fringed backwater lagoons, traditional wooden kettuvallam houseboats, and paddy fields.",
+                hostels: ["Artpackers Life Hostel", "Triveni River Hostel", "Zostel Alleppey"],
+                transportInfo: {
+                    mode: "Kerala State Water Transport Passenger Boat",
+                    details: "Passenger ferry steamships running between Kottayam and Alappuzha jetty.",
+                    mapQuery: "Alappuzha+Kerala"
+                }
+            },
+            {
+                id: 22,
+                name: "Cappadocia Cave Valleys",
+                type: "international",
+                transport: "flight",
+                category: "Anatolian Fairy Chimneys",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?auto=format&fit=crop&w=600&q=80",
+                description: "Surreal rock chimney formations, underground historic cities, and dawn hot-air balloon flights.",
+                hostels: ["Stay In Peace Cave Hostel", "Kamelya Cave Hostel", "Sato Cave Hostel Göreme"],
+                transportInfo: {
+                    mode: "Turkish Airlines to Nevşehir / Kayseri",
+                    details: "Flight to Nevşehir Kapadokya Airport (NAV) followed by a 40-minute valley shuttle.",
+                    mapQuery: "Cappadocia+Turkey"
+                }
+            },
+            {
+                id: 23,
+                name: "Coorg Coffee Highlands",
+                type: "domestic",
+                transport: "road",
+                category: "Coffee Estates & Waterfalls",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?auto=format&fit=crop&w=600&q=80",
+                description: "Fragrant Arabica coffee plantations, misty Abbey Falls, and Kodava culture.",
+                hostels: ["Zostel Coorg", "The Hosteller Coorg", "Coorg Coffee Backpackers"],
+                transportInfo: {
+                    mode: "Mysuru-Madikeri State Highway Road",
+                    details: "Overnight bus or car drive from Bengaluru (250km) via Mysuru road.",
+                    mapQuery: "Madikeri+Coorg+Karnataka"
+                }
+            },
+            {
+                id: 24,
+                name: "Jaipur Pink City Forts",
+                type: "domestic",
+                transport: "train",
+                category: "Rajput Architecture",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=600&q=80",
+                description: "Honeycomb facade of Hawa Mahal, hilltop Amer Fort, and terracotta pink bazaars.",
+                hostels: ["The Moustache Jaipur", "Zostel Jaipur", "Chalo Eco Hostel"],
+                transportInfo: {
+                    mode: "Ajmer Shatabdi Express Railway",
+                    details: "Direct fast rail from New Delhi (NDLS) to Jaipur Junction (JP). Duration: 4.5 Hours.",
+                    mapQuery: "Jaipur+Rajasthan"
+                }
+            },
+            {
+                id: 25,
+                name: "Cairo Pyramids & Nile",
+                type: "international",
+                transport: "ship",
+                category: "Ancient Nile Civilisation",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=600&q=80",
+                description: "Great Pyramids of Giza, the Great Sphinx, and traditional felucca sailboats along the Nile.",
+                hostels: ["Dahab Hostel Cairo", "Tahrir Square Hostel", "Holy Sheet Hostel Cairo"],
+                transportInfo: {
+                    mode: "EgyptAir Flight & Nile Felucca Boat",
+                    details: "Direct flight to Cairo International (CAI) with Nile river felucca sailing charters.",
+                    mapQuery: "Cairo+Egypt"
+                }
+            },
+            {
+                id: 26,
+                name: "Jaisalmer Golden Fort",
+                type: "domestic",
+                transport: "train",
+                category: "Thar Desert Living Fort",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1572445271230-a78b5944a659?auto=format&fit=crop&w=600&q=80",
+                description: "A living golden sandstone fort, carved havelis, and overnight Thar desert camel camps.",
+                hostels: ["Hostel Fort Side Jaisalmer", "Zostel Jaisalmer", "Desert Haveli Backpackers"],
+                transportInfo: {
+                    mode: "Runicha Express Railway",
+                    details: "Overnight train across desert dunes to Jaisalmer Railway Station (JSM).",
+                    mapQuery: "Jaisalmer+Rajasthan"
+                }
+            },
+            {
+                id: 27,
+                name: "Kandy Tea Mountains & Relics",
+                type: "international",
+                transport: "train",
+                category: "Ceylon Mountain Railway",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1586861635167-e5223aadc9fe?auto=format&fit=crop&w=600&q=80",
+                description: "Sacred Temple of the Tooth, mist-covered Ceylon tea gardens, and iconic blue mountain trains.",
+                hostels: ["Kandy City Hostel", "SJJ Hostel Kandy", "Clock Inn Kandy"],
+                transportInfo: {
+                    mode: "Sri Lanka Railways Blue Train",
+                    details: "Scenic railway line running from Colombo Fort station up into Kandy highlands.",
+                    mapQuery: "Kandy+Sri+Lanka"
+                }
+            },
+            {
+                id: 28,
+                name: "Hanle Dark Sky Reserve",
+                type: "domestic",
+                transport: "road",
+                category: "High Altitude Observatory",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=600&q=80",
+                description: "India's official Dark Sky Sanctuary, home to the Indian Astronomical Observatory and Milky Way vistas.",
+                hostels: ["Hanle Stargazer Homestay Hostel", "Milky Way Backpackers", "Hanle Nomad Lodge"],
+                transportInfo: {
+                    mode: "Chushul-Hanle Border Road Expedition",
+                    details: "High-altitude 270km drive from Leh via Chumathang hot springs. Inner Line Permit required.",
+                    mapQuery: "Hanle+Ladakh"
+                }
+            },
+            {
+                id: 29,
+                name: "Edinburgh Old Town & Castle",
+                type: "international",
+                transport: "train",
+                category: "Scottish Gothic Heritage",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=600&q=80",
+                description: "Cobblestone Royal Mile, brooding medieval castle perched on extinct volcanic rock, and gothic closes.",
+                hostels: ["Castle Rock Hostel", "High Street Hostel", "Kick Ass Grassmarket"],
+                transportInfo: {
+                    mode: "LNER East Coast Main Line Rail",
+                    details: "Fast train from London King's Cross to Edinburgh Waverley station. Duration: 4.5 Hours.",
+                    mapQuery: "Edinburgh+Scotland"
+                }
+            },
+            {
+                id: 30,
+                name: "Shimla Colonial Ridge",
+                type: "domestic",
+                transport: "train",
+                category: "Himalayan Hill Station",
+                rating: "4.6",
+                image: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=600&q=80",
+                description: "Neo-gothic Christ Church, pedestrian Mall Road, and surrounding pine forest ridges.",
+                hostels: ["The Hosteller Shimla", "Zostel Shimla", "Woodville Backpackers"],
+                transportInfo: {
+                    mode: "Kalka-Shimla UNESCO Toy Train",
+                    details: "Historic narrow-gauge railway crossing 102 tunnels from Kalka up to Shimla.",
+                    mapQuery: "Shimla+Himachal+Pradesh"
+                }
+            },
+            {
+                id: 31,
+                name: "Chiang Mai Night Bazaars",
+                type: "international",
+                transport: "flight",
+                category: "Lanna Kingdom Heritage",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1513415756790-2ac1db1297d0?auto=format&fit=crop&w=600&q=80",
+                description: "Ancient brick city walls, gilded mountain temples (Wat Phra That), and night walking street bazzars.",
+                hostels: ["Stamps Backpackers", "Alexa Hostel Chiang Mai", "Hug Hostel Rooftop"],
+                transportInfo: {
+                    mode: "AirAsia Flight / Express Train",
+                    details: "Direct flight or overnight sleeper train from Bangkok Krung Thep Aphiwat station.",
+                    mapQuery: "Chiang+Mai+Thailand"
+                }
+            },
+            {
+                id: 32,
+                name: "Wayanad Rain Forests",
+                type: "domestic",
+                transport: "road",
+                category: "Western Ghats Bio-Reserve",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=600&q=80",
+                description: "Neolithic Edakkal cave carvings, spice plantations, and dense evergreen forest trails.",
+                hostels: ["Zostel Wayanad", "The Hosteller Wayanad", "Pepperland Backpackers"],
+                transportInfo: {
+                    mode: "Thamarassery Churam Mountain Ghat Road",
+                    details: "9 hairpin bend road journey from Kozhikode Railway Station (85km).",
+                    mapQuery: "Wayanad+Kerala"
+                }
+            },
+            {
+                id: 33,
+                name: "Ooty Nilgiri Tea Hills",
+                type: "domestic",
+                transport: "train",
+                category: "Nilgiri Blue Mountains",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1589136777351-fdc9c91ae5f9?auto=format&fit=crop&w=600&q=80",
+                description: "Botanical gardens, tea factory estates, and mist-laden Nilgiri mountain peaks.",
+                hostels: ["Zostel Ooty", "The Hosteller Ooty", "Blue Mountain Backpackers"],
+                transportInfo: {
+                    mode: "Nilgiri Mountain Railway (Rack & Pinion)",
+                    details: "Heritage steam train from Mettupalayam up to Udhagamandalam (Ooty) station.",
+                    mapQuery: "Ooty+Tamil+Nadu"
+                }
+            },
+            {
+                id: 34,
+                name: "Luang Prabang Mekong Port",
+                type: "international",
+                transport: "ship",
+                category: "Mekong River Heritage",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1540611025311-01df3cef54b5?auto=format&fit=crop&w=600&q=80",
+                description: "Dawn saffron-robed monk almsgiving, French Indochina architecture, and Kuang Si waterfalls.",
+                hostels: ["Y central Hostel", "Mad Monkey Luang Prabang", "Sunrise Riverside Hostel"],
+                transportInfo: {
+                    mode: "Slow Boat Mekong Steamship / Laos-China Railway",
+                    details: "2-day Mekong river slow boat journey from Houayxay border or bullet train from Vientiane.",
+                    mapQuery: "Luang+Prabang+Laos"
+                }
+            },
+            {
+                id: 35,
+                name: "Auroville Universal Town",
+                type: "domestic",
+                transport: "road",
+                category: "Experimental Eco-Township",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=600&q=80",
+                description: "Golden Matrimandir dome, sustainable forest communities, and international organic cafes.",
+                hostels: ["Auroville Backpackers", "Stargazer Eco Hostel", "Time Travel Hostel Auroville"],
+                transportInfo: {
+                    mode: "Pondicherry Auto / Bicycle Trail",
+                    details: "12km green belt drive from Pondicherry town center via East Coast Road.",
+                    mapQuery: "Auroville+Tamil+Nadu"
+                }
+            },
+            {
+                id: 36,
+                name: "Kathmandu Valley Shrines",
+                type: "international",
+                transport: "flight",
+                category: "Himalayan Buddhist Temples",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=600&q=80",
+                description: "Durbar Square ancient wooden palaces, Swayambhunath monkey temple, and trekker bazaars.",
+                hostels: ["Alobar Kathmandu Hostel", "Zostel Kathmandu", "Elbrus Home Hostel"],
+                transportInfo: {
+                    mode: "Nepal Airlines / Tribhuvan Flight",
+                    details: "Direct international flight to Tribhuvan Airport (KTM) in Kathmandu valley.",
+                    mapQuery: "Kathmandu+Nepal"
+                }
+            },
+            {
+                id: 37,
+                name: "Khajuraho Temple Sculptures",
+                type: "domestic",
+                transport: "train",
+                category: "Nagara Architectural Marvels",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1600100397608-f010e423b971?auto=format&fit=crop&w=600&q=80",
+                description: "Intricately carved 10th-century Chandela dynasty stone temples and light shows.",
+                hostels: ["Hostel Khajuraho", "Zostel Khajuraho", "Moustache Khajuraho"],
+                transportInfo: {
+                    mode: "Khajuraho Vande Bharat Express",
+                    details: "Direct train connection to Khajuraho Railway Station (KURJ).",
+                    mapQuery: "Khajuraho+Madhya+Pradesh"
+                }
+            },
+            {
+                id: 38,
+                name: "Phu Quoc Tropical Isle",
+                type: "international",
+                transport: "ship",
+                category: "Gulf of Thailand Sands",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1540206395-68808572332f?auto=format&fit=crop&w=600&q=80",
+                description: "White sand beaches, cable car rides over fishing islands, and night seafood markets.",
+                hostels: ["9 Station Hostel Phu Quoc", "Phu Quoc Backpackers", "The Rabbit Hole Hotel"],
+                transportInfo: {
+                    mode: "Superdong Express Ferry Steamship / Flight",
+                    details: "Fast passenger ferry steamship from Ha Tien port or direct flight to PQC airport.",
+                    mapQuery: "Phu+Quoc+Vietnam"
+                }
+            },
+            {
+                id: 39,
+                name: "Manali Alpine Valley",
+                type: "domestic",
+                transport: "road",
+                category: "Beas River Valleys",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=600&q=80",
+                description: "Pine-scented mountain air, Solang Valley adventure sports, and ancient Hadimba temple.",
+                hostels: ["Zostel Manali", "The Hosteller Old Manali", "Orchards House Hostel"],
+                transportInfo: {
+                    mode: "Chandigarh-Manali Volvo Bus Highway",
+                    details: "Overnight luxury AC Volvo bus drive passing through Mandi & Kullu valley.",
+                    mapQuery: "Manali+Himachal+Pradesh"
+                }
+            },
+            {
+                id: 40,
+                name: "Fez Ancient Medina",
+                type: "international",
+                transport: "train",
+                category: "Moroccan Labyrinth Medina",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=600&q=80",
+                description: "World's largest car-free urban area, medieval leather tanneries, and mosaic tile madrasas.",
+                hostels: ["Medina Social Club Fez", "Riad Verus Hostel", "Morocco Backpackers Fez"],
+                transportInfo: {
+                    mode: "ONCF Moroccan Railway Network",
+                    details: "Train ride from Casablanca Port or Marrakech up to Fez Ville Railway Station.",
+                    mapQuery: "Fez+Morocco"
+                }
+            },
+            {
+                id: 41,
+                name: "Mahabalipuram Shore Temples",
+                type: "domestic",
+                transport: "road",
+                category: "Pallava Rock-Cut Monuments",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=600&q=80",
+                description: "7th-century oceanfront stone monoliths, Arjuna's Penance bas-relief, and surf beaches.",
+                hostels: ["Mahabs Backpackers Inn", "Shore Temple Surfer Hostel", "MAMALLA Lodge"],
+                transportInfo: {
+                    mode: "East Coast Road (ECR) Bus",
+                    details: "55km drive south of Chennai along ECR highway with frequent MTC bus frequency.",
+                    mapQuery: "Mahabalipuram+Tamil+Nadu"
+                }
+            },
+            {
+                id: 42,
+                name: "Tbilisi Old Town & Sulphur Baths",
+                type: "international",
+                transport: "flight",
+                category: "Caucasian Silk Road Fortress",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1565008447742-97f6f38c985c?auto=format&fit=crop&w=600&q=80",
+                description: "Carved wooden balconies, ancient Narikala fortress, and natural thermal sulphur bathhouses.",
+                hostels: ["Fabrika Hostel Tbilisi", "Envoy Hostel Tbilisi", "Pushkin 10 Hostel"],
+                transportInfo: {
+                    mode: "Georgian Airways / Gulf Air",
+                    details: "Flight to Tbilisi International Airport (TBS) followed by Metro train to Freedom Square.",
+                    mapQuery: "Tbilisi+Georgia"
+                }
+            },
+            {
+                id: 43,
+                name: "Gwalior Fort & Palaces",
+                type: "domestic",
+                transport: "train",
+                category: "Hilltop Citadel Architecture",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1600100397608-f010e423b971?auto=format&fit=crop&w=600&q=80",
+                description: "Imposing blue ceramic tile Man Singh Palace and ancient rock-cut Jain sculptures.",
+                hostels: ["Gwalior Heritage Backpackers", "Fort View Lodge", "Moustache Gwalior"],
+                transportInfo: {
+                    mode: "Gatimaan Express Railway",
+                    details: "Fast rail from Hazrat Nizamuddin to Gwalior Junction (GWL). Duration: 3.5 Hours.",
+                    mapQuery: "Gwalior+Madhya+Pradesh"
+                }
+            },
+            {
+                id: 44,
+                name: "Malacca Historic Straits",
+                type: "international",
+                transport: "ship",
+                category: "Straits Colonial Trading Port",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=600&q=80",
+                description: "Red Dutch Square buildings, Jonker Street night markets, and historic Straits riverboats.",
+                hostels: ["Yotel 138 Malacca Hostel", "Ringo's Foyer Guest House", "Ola Lavanderia Cafe & Hostel"],
+                transportInfo: {
+                    mode: "Straits Passenger Ferry / Express Bus",
+                    details: "Express bus from Kuala Lumpur TBS terminal (2 hours) or passenger ferry from Sumatra.",
+                    mapQuery: "Malacca+Malaysia"
+                }
+            },
+            {
+                id: 45,
+                name: "Pachmarhi Hill Plateau",
+                type: "domestic",
+                transport: "road",
+                category: "Satpura Mountain Reserve",
+                rating: "4.6",
+                image: "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?auto=format&fit=crop&w=600&q=80",
+                description: "Queen of Satpura featuring cave shelters, Bee Falls, and sunset points.",
+                hostels: ["Satpura Backpackers Hostel", "Pachmarhi Forest Lodge", "Mptravel Haven"],
+                transportInfo: {
+                    mode: "Pipariya Railway Station + Mountain Cab",
+                    details: "Train to Pipariya (PPI) followed by a 47km scenic mountain cab climb.",
+                    mapQuery: "Pachmarhi+Madhya+Pradesh"
+                }
+            },
+            {
+                id: 46,
+                name: "Almaty Tien Shan Mountains",
+                type: "international",
+                transport: "flight",
+                category: "Central Asian Silk Road",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=600&q=80",
+                description: "Shymbulak alpine snow peaks, Zenkov wooden cathedral, and Big Almaty glacial lake.",
+                hostels: ["Dostyk Hostel Almaty", "Dormition Backpackers", "Parasat Hostel"],
+                transportInfo: {
+                    mode: "Air Astana Direct Flight",
+                    details: "Direct flight to Almaty International (ALA). Flight time: 3.5 Hours from Delhi.",
+                    mapQuery: "Almaty+Kazakhstan"
+                }
+            },
+            {
+                id: 47,
+                name: "Kodaikanal Star Lake",
+                type: "domestic",
+                transport: "road",
+                category: "Palani Hills Reserve",
+                rating: "4.7",
+                image: "https://images.unsplash.com/photo-1589136777351-fdc9c91ae5f9?auto=format&fit=crop&w=600&q=80",
+                description: "Star-shaped Kodai lake, Pillar Rocks views, and eucalyptus forest walks.",
+                hostels: ["Zostel Kodaikanal", "The Hosteller Kodaikanal", "Kodai Backpackers Inn"],
+                transportInfo: {
+                    mode: "Kodai Road Station + Mountain Ghat Drive",
+                    details: "Train to Kodai Road (KQN) followed by 80km scenic mountain road drive.",
+                    mapQuery: "Kodaikanal+Tamil+Nadu"
+                }
+            },
+            {
+                id: 48,
+                name: "Zanzibar Spice Island",
+                type: "international",
+                transport: "ship",
+                category: "Swahili Coast Trading Isle",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1540206395-68808572332f?auto=format&fit=crop&w=600&q=80",
+                description: "Carved wooden doors of Stone Town, spice plantations, and turquoise Indian Ocean reefs.",
+                hostels: ["Lost & Found Zanzibar", "Zanzibar Backpackers", "The Z Hotel Lodge"],
+                transportInfo: {
+                    mode: "Dar es Salaam Passenger Ferry Steamship",
+                    details: "Azam Marine high-speed passenger ferry steamship from Dar es Salaam port (2 hours).",
+                    mapQuery: "Zanzibar+Tanzania"
+                }
+            },
+            {
+                id: 49,
+                name: "Spiiti High Desert Valley",
+                type: "domestic",
+                transport: "road",
+                category: "Trans-Himalayan Cold Desert",
+                rating: "4.9",
+                image: "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=600&q=80",
+                description: "Key Monastery perched on cliffs, Chandratal moon lake, and world's highest post office at Hikkim.",
+                hostels: ["Zostel Spiti Kaza", "The Hosteller Spiti", "Spiti Horizon Backpackers"],
+                transportInfo: {
+                    mode: "Himalayan HRTC Mountain Bus",
+                    details: "High mountain road pass via Shimla-Kinnaur route or Manali Kaza route via Kunzum Pass.",
+                    mapQuery: "Kaza+Spiti+Valley"
+                }
+            },
+            {
+                id: 50,
+                name: "Halle & Leipzig Cultural Saxon Ports",
+                type: "international",
+                transport: "train",
+                category: "Central European Music & Art",
+                rating: "4.8",
+                image: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=600&q=80",
+                description: "Historic Saxon trade fair cities, Bach music heritage, and canal-lined art districts.",
+                hostels: ["Hostel preussen", "Central Globetrotter Leipzig", "Halle Backpackers Hostel"],
+                transportInfo: {
+                    mode: "Deutsche Bahn ICE High-Speed Train",
+                    details: "Direct ICE fast train from Berlin Hauptbahnhof to Leipzig / Halle Central Station.",
+                    mapQuery: "Leipzig+Germany"
+                }
+            }
+        ];
+
+        let journalEntries = JSON.parse(localStorage.getItem('cartographer_journal')) || [];
+        let currentModalItem = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderExpeditions(globalExpeditions);
+            updateJournalCount();
+            startPocketWatch();
+        });
+
+        // Interactive Pocketwatch Clock
+        function startPocketWatch() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('pocketWatchDisplay').textContent = now.toLocaleTimeString();
+            }, 1000);
+        }
+
+        function togglePocketWatch() {
+            const icon = document.getElementById('watchIcon');
+            icon.classList.toggle('fa-spin');
+        }
+
+        // API Modal Actions
+        function openApiModal() { document.getElementById('apiModal').classList.remove('hidden'); }
+        function closeApiModal() {
+            document.getElementById('apiModal').classList.add('hidden');
+            document.getElementById('apiStatusText').textContent = "Key Linked Active";
+        }
+
+        // Filtering Logic
+        function filterExpeditions() {
+            const scope = document.getElementById('filterScope').value;
+            const transport = document.getElementById('filterTransport').value;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = globalExpeditions.filter(item => {
+                const matchScope = scope === 'all' || item.type === scope;
+                const matchTransport = transport === 'all' || item.transport === transport;
+                const matchSearch = item.name.toLowerCase().includes(search) || item.category.toLowerCase().includes(search);
+                return matchScope && matchTransport && matchSearch;
+            });
+
+            renderExpeditions(filtered);
+        }
+
+        function renderExpeditions(items) {
+            const grid = document.getElementById('destinationsGrid');
+            grid.innerHTML = '';
+
+            if (items.length === 0) {
+                grid.innerHTML = `<div class="col-span-3 text-center py-12 text-[#5c4331] italic">No cartographic expeditions found matching your criteria.</div>`;
+                return;
+            }
+
+            items.forEach(item => {
+                const isSaved = journalEntries.some(e => e.id === item.id);
+                const card = document.createElement('div');
+                card.className = "polaroid cursor-pointer flex flex-col justify-between";
+                card.innerHTML = `
+                    <div onclick="openModal(${item.id})" class="overflow-hidden h-52 relative border border-[#2c221e]/20">
+                        <img src="${item.image}" class="w-full h-full object-cover grayscale contrast-125 sepia hover:scale-105 transition duration-500">
+                        <span class="absolute top-2 right-2 bg-[#2c221e] text-[#f4ecd8] text-[10px] font-bold px-2 py-0.5 rounded">★ ${item.rating}</span>
+                    </div>
+                    <div class="pt-4 space-y-2" onclick="openModal(${item.id})">
+                        <span class="text-[10px] uppercase font-bold text-[#7c6351]">${item.category}</span>
+                        <h3 class="heading-font text-lg text-[#2c221e]">${item.name}</h3>
+                        <p class="text-xs text-[#5c4331] line-clamp-2">${item.description}</p>
+                    </div>
+                    <div class="pt-3 mt-3 border-t border-dashed border-[#d3c2a5] flex justify-between items-center">
+                        <span class="text-[11px] font-bold text-[#4a3525] underline" onclick="openModal(${item.id})">Inspect Ledger</span>
+                        <button onclick="event.stopPropagation(); toggleJournal(${item.id})" class="px-3 py-1 bg-[#2c221e] text-[#f4ecd8] text-[11px] rounded font-bold">
+                            ${isSaved ? 'In Checklist ✓' : '+ Add'}
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Modal Handling
+        function openModal(id) {
+            const item = globalExpeditions.find(e => e.id === id);
+            if (!item) return;
+            currentModalItem = item;
+
+            document.getElementById('modalImg').src = item.image;
+            document.getElementById('modalPolaroidCaption').textContent = item.name;
+            document.getElementById('modalTitle').textContent = item.name;
+            document.getElementById('modalCategory').textContent = item.category;
+            document.getElementById('modalLocation').innerHTML = `<i class="fa-solid fa-compass mr-1"></i> ${item.type.toUpperCase()} EXPEDITION`;
+            document.getElementById('modalDescription').textContent = item.description;
+
+            // Hostels list
+            document.getElementById('modalHostels').innerHTML = item.hostels.map(h => `<li class="notebook-line"><i class="fa-solid fa-bed text-amber-800 mr-2"></i> ${h}</li>`).join('');
+
+            // Transport info
+            document.getElementById('modalTransportBox').innerHTML = `
+                <p class="font-bold text-[#2c221e]"><i class="fa-solid fa-ticket mr-1"></i> ${item.transportInfo.mode}</p>
+                <p class="text-[#5c4331]">${item.transportInfo.details}</p>
+            `;
+
+            // Embedded Google Maps iframe simulation
+            document.getElementById('mapFrame').src = `https://maps.google.com/maps?q=${item.transportInfo.mapQuery}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+
+            updateModalButtonState();
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+            currentModalItem = null;
+        }
+
+        function updateModalButtonState() {
+            if (!currentModalItem) return;
+            const btn = document.getElementById('modalAddBtn');
+            const isSaved = journalEntries.some(e => e.id === currentModalItem.id);
+            btn.textContent = isSaved ? 'Remove from Notebook Checklist' : 'Add to Notebook Checklist';
+        }
+
+        // Journal / Itinerary management
+        function toggleJournal(id) {
+            const item = globalExpeditions.find(e => e.id === id);
+            if (!item) return;
+
+            const index = journalEntries.findIndex(e => e.id === id);
+            if (index > -1) {
+                journalEntries.splice(index, 1);
+            } else {
+                journalEntries.push(item);
+            }
+
+            localStorage.setItem('cartographer_journal', JSON.stringify(journalEntries));
+            updateJournalCount();
+            renderExpeditions(globalExpeditions);
+            if (currentModalItem && currentModalItem.id === id) {
+                updateModalButtonState();
+            }
+        }
+
+        function toggleJournalFromModal() {
+            if (currentModalItem) toggleJournal(currentModalItem.id);
+        }
+
+        function clearJournal() {
+            journalEntries = [];
+            localStorage.setItem('cartographer_journal', JSON.stringify(journalEntries));
+            updateJournalCount();
+            renderExpeditions(globalExpeditions);
+            renderNotebookItinerary();
+        }
+
+        function updateJournalCount() {
+            document.getElementById('itineraryCount').textContent = journalEntries.length;
+        }
+
+        function switchTab(tab) {
+            const explore = document.getElementById('viewExplore');
+            const itinerary = document.getElementById('viewItinerary');
+            const btnExp = document.getElementById('btnExplore');
+            const btnIti = document.getElementById('btnItinerary');
+
+            if (tab === 'explore') {
+                explore.classList.remove('hidden');
+                itinerary.classList.add('hidden');
+                btnExp.className = "flex-1 bg-[#2c221e] text-[#f4ecd8] py-2.5 px-4 rounded text-xs font-bold uppercase tracking-wider mr-2";
+                btnIti.className = "flex-1 bg-[#d3c2a5] text-[#2c221e] py-2.5 px-4 rounded text-xs font-bold uppercase tracking-wider border border-[#4a3525]";
+            } else {
+                explore.classList.add('hidden');
+                itinerary.classList.remove('hidden');
+                btnIti.className = "flex-1 bg-[#2c221e] text-[#f4ecd8] py-2.5 px-4 rounded text-xs font-bold uppercase tracking-wider border border-[#4a3525]";
+                btnExp.className = "flex-1 bg-[#d3c2a5] text-[#2c221e] py-2.5 px-4 rounded text-xs font-bold uppercase tracking-wider mr-2";
+                renderNotebookItinerary();
+            }
+        }
+
+        function renderNotebookItinerary() {
+            const list = document.getElementById('itineraryNotebookList');
+            list.innerHTML = '';
+
+            if (journalEntries.length === 0) {
+                list.innerHTML = `<p class="text-xs text-[#5c4331] italic text-center py-8">Your notebook checklist is currently empty. Add waypoints from the Atlas.</p>`;
+                return;
+            }
+
+            journalEntries.forEach((entry, idx) => {
+                const row = document.createElement('div');
+                row.className = "notebook-line flex items-center justify-between text-xs py-2 px-3 bg-[#f9f5eb] rounded border border-[#d3c2a5]";
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-[#4a3525]">${idx + 1}.</span>
+                        <div>
+                            <strong class="heading-font text-[#2c221e] text-sm">${entry.name}</strong>
+                            <span class="text-[#7c6351] block text-[11px]">${entry.transportInfo.mode}</span>
+                        </div>
+                    </div>
+                    <button onclick="toggleJournal(${entry.id})" class="text-red-800 font-bold hover:underline">Remove</button>
+                `;
+                list.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
